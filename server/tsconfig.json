@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "commonjs",
+    "moduleResolution": "node10",
+    "ignoreDeprecations": "6.0",
+    "esModuleInterop": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "paths": {
+      "@inkora/shared": ["../shared/types/index.ts"]
+    }
+  },
+  "include": ["src", "../shared/types"],
+  "exclude": ["src/__tests__"]
+}
