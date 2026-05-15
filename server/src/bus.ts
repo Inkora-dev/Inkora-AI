@@ -4,7 +4,7 @@ import type { AgentEvent } from "./agent"
 // ─── Event map ────────────────────────────────────────────────────────────────
 
 export interface BusEvents {
-    "agent:start": { runId: string; task: string; model: string; workDir: string }
+    "agent:start": { runId: string; task: string; model: string; workDir?: string }
     "agent:event": { runId: string; event: AgentEvent }
     "agent:done":  { runId: string; durationMs: number; iterations: number }
     "agent:error": { runId: string; error: string }
@@ -50,7 +50,7 @@ bus.on("agent:start", ({ runId, task, model, workDir }) => {
         id: runId,
         task: task.slice(0, 200),
         model,
-        workDir,
+        workDir: workDir ?? "",
         startedAt: Date.now(),
         durationMs: null,
         status: "running",

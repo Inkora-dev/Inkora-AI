@@ -6,6 +6,7 @@ import { SettingsModal } from "./components/SettingsModal"
 import { ChatPage } from "./pages/ChatPage"
 import { DashboardPage } from "./pages/DashboardPage"
 import { AgentPage } from "./pages/AgentPage"
+import { AutomationPage } from "./pages/AutomationPage"
 import { AppLayout } from "./layout/AppLayout"
 import {
     loadConversations, saveConversations,
@@ -182,6 +183,7 @@ function App() {
             }
           />
           <Route path="/agent" element={<AgentPage activeModel={activeModel} />} />
+          <Route path="/automation" element={<AutomationPage activeModel={activeModel} />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>

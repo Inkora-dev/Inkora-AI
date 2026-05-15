@@ -101,7 +101,7 @@ function UserMessage({ content, isLoading, onEdit }: {
                             if (e.key === "Enter" && (e.metaKey || e.ctrlKey)) saveEdit()
                             if (e.key === "Escape") { setEditValue(content); setEditing(false) }
                         }}
-                        className="w-full resize-none rounded-2xl rounded-tr-[6px] border border-[#6C65E8]/30 bg-[#18181F] px-4 py-3 text-[13.5px] leading-relaxed text-[#E0E0E8] outline-none"
+                        className="w-full resize-none rounded-2xl rounded-tr-[6px] border border-[#6C65E8]/30 bg-[#1A1830] px-4 py-3 text-[13.5px] leading-relaxed text-[#E8E8F4] outline-none"
                     />
                     <div className="mt-2 flex justify-end gap-2">
                         <button
@@ -129,7 +129,7 @@ function UserMessage({ content, isLoading, onEdit }: {
             transition={{ duration: 0.18 }}
             className="group flex flex-col items-end gap-1"
         >
-            <div className="max-w-[72%] rounded-2xl rounded-tr-[6px] border border-white/[0.08] bg-[#18181F] px-4 py-3 text-[13.5px] leading-relaxed text-[#E0E0E8]">
+            <div className="max-w-[72%] rounded-2xl rounded-tr-[6px] border border-[#6C65E8]/20 bg-[#1A1830] px-4 py-3 text-[13.5px] leading-relaxed text-[#E8E8F4]">
                 {content}
             </div>
             {!isLoading && (

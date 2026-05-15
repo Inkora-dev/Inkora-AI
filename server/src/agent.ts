@@ -4,45 +4,11 @@ import { exec } from "child_process"
 import { promisify } from "util"
 import { retrieveContext } from "./rag"
 import { astSymbols, astFindDefinition } from "./ast"
-import { bus } from "./bus"
-import { log } from "./logger"
+import { runAgentWithTools, str, type AgentEvent, type ToolArgs, type ToolResult } from "./agent-core"
+
+export type { AgentEvent }
 
 const execAsync = promisify(exec)
-
-// Compose user abort signal with a per-call ms timeout (Node 18 compatible)
-function withTimeout(signal: AbortSignal, ms: number): { signal: AbortSignal; clear: () => void } {
-    const ctrl = new AbortController()
-    const timer = setTimeout(() => ctrl.abort(new DOMException(`Timeout après ${ms / 1000}s`, "TimeoutError")), ms)
-    const onAbort = () => ctrl.abort(signal.reason)
-    signal.addEventListener("abort", onAbort, { once: true })
-    const clear = () => {
-        clearTimeout(timer)
-        signal.removeEventListener("abort", onAbort)
-    }
-    return { signal: ctrl.signal, clear }
-}
-
-// ─── Event types (streamed to frontend as NDJSON) ─────────────────────────────
-
-export type AgentEvent =
-    | { type: "stream_chunk"; chunk: string }                          // token as it arrives
-    | { type: "stream_commit"; as: "thought" | "answer"; text: string } // end of one Ollama call
-    | { type: "tool_call"; name: string; args: Record<string, unknown> }
-    | { type: "tool_result"; name: string; content: string; isError?: boolean }
-    | { type: "error"; content: string }
-    | { type: "done" }
-
-// ─── Ollama message types ─────────────────────────────────────────────────────
-
-interface OllamaToolCall {
-    function: { name: string; arguments: Record<string, unknown> }
-}
-
-interface OllamaMessage {
-    role: "system" | "user" | "assistant" | "tool"
-    content: string
-    tool_calls?: OllamaToolCall[]
-}
 
 // ─── Tool definitions (Ollama / OpenAI format) ────────────────────────────────
 
@@ -137,7 +103,7 @@ const TOOL_DEFINITIONS = [
         type: "function",
         function: {
             name: "ast_symbols",
-            description: "List all top-level symbols (functions, classes, interfaces, types, constants) in a source file with their line numbers. Much more precise than search_code for understanding file structure.",
+            description: "List all top-level symbols (functions, classes, interfaces, types, constants) in a source file with their line numbers.",
             parameters: {
                 type: "object",
                 properties: {
@@ -155,7 +121,7 @@ const TOOL_DEFINITIONS = [
             parameters: {
                 type: "object",
                 properties: {
-                    name: { type: "string", description: "Exact name of the symbol to find (e.g. 'handleRun', 'ChatPage', 'Message')" },
+                    name: { type: "string", description: "Exact name of the symbol to find" },
                     dir:  { type: "string", description: "Directory to search in (optional, defaults to working dir)" },
                 },
                 required: ["name"],
@@ -166,7 +132,7 @@ const TOOL_DEFINITIONS = [
         type: "function",
         function: {
             name: "rag_search",
-            description: "Search through RAG-indexed documents using semantic similarity. Use this when the user has uploaded documents and wants to query their content.",
+            description: "Search through RAG-indexed documents using semantic similarity.",
             parameters: {
                 type: "object",
                 properties: {
@@ -228,27 +194,12 @@ const EXEC_SHELL: string = process.platform === "win32" ? "cmd.exe" : "/bin/bash
 
 // ─── Tool implementations ─────────────────────────────────────────────────────
 
-type ToolResult = { content: string; isError?: boolean }
-type ToolArgs = Record<string, unknown>
-
-function str(v: unknown): string { return typeof v === "string" ? v : String(v ?? "") }
-
-// Ollama sometimes returns tool call arguments as a JSON string instead of an object
-function normalizeArgs(args: unknown): Record<string, unknown> {
-    if (typeof args === "string") {
-        try { return JSON.parse(args) as Record<string, unknown> } catch { return { value: args } }
-    }
-    if (args !== null && typeof args === "object" && !Array.isArray(args)) {
-        return args as Record<string, unknown>
-    }
-    return {}
-}
-
-async function readFileTool(args: ToolArgs): Promise<ToolResult> {
+async function readFileTool(args: ToolArgs, workDir: string): Promise<ToolResult> {
     const filePath = str(args.path)
     if (!filePath) return { content: "Argument 'path' manquant.", isError: true }
+    const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(workDir || process.cwd(), filePath)
     try {
-        const content = await readFile(filePath, "utf-8")
+        const content = await readFile(resolved, "utf-8")
         const lines = content.split("\n")
         const preview = lines.length > 200
             ? [...lines.slice(0, 200), `\n... (${lines.length - 200} lignes supplémentaires)`].join("\n")
@@ -276,10 +227,11 @@ async function writeFileTool(args: ToolArgs, workDir: string): Promise<ToolResul
     }
 }
 
-async function listDirTool(args: ToolArgs): Promise<ToolResult> {
-    const dirPath = str(args.path) || "."
+async function listDirTool(args: ToolArgs, workDir: string): Promise<ToolResult> {
+    const dirPath = str(args.path) || workDir || "."
+    const resolved = path.isAbsolute(dirPath) ? dirPath : path.resolve(workDir || process.cwd(), dirPath)
     const SKIP = new Set(["node_modules", ".git", "dist", "build", ".next", "__pycache__", ".venv"])
-    const entries = await readdir(dirPath, { withFileTypes: true }).catch((err) => String(err))
+    const entries = await readdir(resolved, { withFileTypes: true }).catch((err) => String(err))
     if (typeof entries === "string") return { content: entries, isError: true }
     const lines = entries
         .filter((e) => !e.name.startsWith(".") && !SKIP.has(e.name))
@@ -373,11 +325,12 @@ async function shellRunTool(args: ToolArgs, workDir: string): Promise<ToolResult
     }
 }
 
-async function astSymbolsTool(args: ToolArgs): Promise<ToolResult> {
+async function astSymbolsTool(args: ToolArgs, workDir: string): Promise<ToolResult> {
     const filePath = str(args.path)
     if (!filePath) return { content: "Argument 'path' manquant.", isError: true }
+    const resolved = path.isAbsolute(filePath) ? filePath : path.resolve(workDir || process.cwd(), filePath)
     try {
-        return { content: await astSymbols(filePath) }
+        return { content: await astSymbols(resolved) }
     } catch (err) {
         return { content: String(err), isError: true }
     }
@@ -405,82 +358,6 @@ async function ragSearchTool(args: ToolArgs, ollamaUrl: string): Promise<ToolRes
     }
 }
 
-function createTools(workDir: string, ollamaUrl: string): Record<string, (args: ToolArgs) => Promise<ToolResult>> {
-    return {
-        read_file:       (args) => readFileTool(args),
-        write_file:      (args) => writeFileTool(args, workDir),
-        list_dir:        (args) => listDirTool(args),
-        search_code:     (args) => searchCodeTool(args, workDir),
-        ast_symbols:     (args) => astSymbolsTool(args),
-        ast_find_symbol: (args) => astFindSymbolTool(args, workDir),
-        git_run:         (args) => gitRunTool(args, workDir),
-        shell_run:       (args) => shellRunTool(args, workDir),
-        rag_search:      (args) => ragSearchTool(args, ollamaUrl),
-    }
-}
-
-// ─── Ollama streaming call ────────────────────────────────────────────────────
-
-type StreamItem = { text: string } | { finalMessage: OllamaMessage }
-
-async function* streamOllama(
-    messages: OllamaMessage[],
-    ollamaUrl: string,
-    model: string,
-    signal: AbortSignal
-): AsyncGenerator<StreamItem> {
-    const { signal: timedSignal, clear } = withTimeout(signal, 90_000)
-
-    function parseLine(line: string): { text?: string; toolCalls?: OllamaToolCall[] } | null {
-        if (!line.trim()) return null
-        try {
-            const json = JSON.parse(line) as { message?: OllamaMessage; done?: boolean }
-            const chunk = json.message?.content ?? ""
-            const toolCalls = json.message?.tool_calls?.length ? json.message.tool_calls : undefined
-            return { text: chunk || undefined, toolCalls }
-        } catch { return null }
-    }
-
-    try {
-        const r = await fetch(`${ollamaUrl}/api/chat`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model, messages, tools: TOOL_DEFINITIONS, stream: true }),
-            signal: timedSignal,
-        })
-        if (!r.ok) throw new Error(`Ollama ${r.status}: ${await r.text().catch(() => "")}`)
-        if (!r.body) throw new Error("Ollama n'a pas renvoyé de stream")
-
-        const reader = r.body.getReader()
-        const decoder = new TextDecoder()
-        let buffer = ""
-        let accContent = ""
-        let finalToolCalls: OllamaToolCall[] | undefined
-
-        while (true) {
-            const { done, value } = await reader.read()
-            if (done) break
-            buffer += decoder.decode(value, { stream: true })
-            const lines = buffer.split("\n")
-            buffer = lines.pop() ?? ""
-            for (const line of lines) {
-                const parsed = parseLine(line)
-                if (!parsed) continue
-                if (parsed.text) { accContent += parsed.text; yield { text: parsed.text } }
-                if (parsed.toolCalls) finalToolCalls = parsed.toolCalls
-            }
-        }
-        buffer += decoder.decode()
-        const last = parseLine(buffer)
-        if (last?.text) { accContent += last.text; yield { text: last.text } }
-        if (last?.toolCalls) finalToolCalls = last.toolCalls
-
-        yield { finalMessage: { role: "assistant", content: accContent, tool_calls: finalToolCalls } }
-    } finally {
-        clear()
-    }
-}
-
 // ─── System prompt ────────────────────────────────────────────────────────────
 
 const SYSTEM_PROMPT = `Tu es un assistant expert en développement logiciel avec accès à des outils puissants.
@@ -503,7 +380,7 @@ Stratégie:
 
 Réponds toujours en français avec une réponse complète et structurée.`
 
-// ─── ReAct loop ───────────────────────────────────────────────────────────────
+// ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function* runAgent(
     task: string,
@@ -513,88 +390,19 @@ export async function* runAgent(
     signal: AbortSignal,
     maxIterations = 15
 ): AsyncGenerator<AgentEvent> {
-    const tools = createTools(workDir, ollamaUrl)
     const systemContent = SYSTEM_PROMPT + (workDir ? `\n\nRépertoire de travail: ${workDir}` : "")
 
-    const messages: OllamaMessage[] = [
-        { role: "system", content: systemContent },
-        { role: "user", content: task },
-    ]
-
-    const runId = crypto.randomUUID()
-    log.agent.info({ runId, model, workDir, task: task.slice(0, 120) }, "agent started")
-    const startTs = Date.now()
-    const recentFingerprints: string[] = []
-    let iterCount = 0
-    bus.emit("agent:start", { runId, task, model, workDir })
-
-    for (let i = 0; i < maxIterations; i++) {
-        if (signal.aborted) break
-
-        let response: OllamaMessage | undefined
-
-        try {
-            for await (const item of streamOllama(messages, ollamaUrl, model, signal)) {
-                if ("text" in item) {
-                    yield { type: "stream_chunk", chunk: item.text }
-                } else {
-                    response = item.finalMessage
-                }
-            }
-        } catch (err) {
-            const isAbort = (err as Error).name === "AbortError" || (err as DOMException).name === "TimeoutError"
-            if (isAbort && signal.aborted) break
-            const msg = err instanceof Error ? err.message : String(err)
-            log.agent.error({ runId, err: msg, iteration: i }, "stream error")
-            bus.emit("agent:error", { runId, error: msg })
-            yield { type: "error", content: isAbort ? "Ollama n'a pas répondu dans les temps (90s). Vérifie que le modèle est chargé." : msg }
-            break
-        }
-
-        iterCount++
-
-        if (!response) break
-        messages.push(response)
-
-        if (response.tool_calls?.length) {
-            // Commit any streamed reasoning as a "thought" bubble
-            yield { type: "stream_commit", as: "thought", text: response.content?.trim() ?? "" }
-
-            for (const toolCall of response.tool_calls) {
-                const { name, arguments: rawArgs } = toolCall.function
-                const args = normalizeArgs(rawArgs)
-                const fingerprint = `${name}::${JSON.stringify(args)}`
-                const repeatCount = recentFingerprints.filter((f) => f === fingerprint).length
-                if (repeatCount >= 2) {
-                    yield { type: "error", content: `Boucle détectée : l'outil "${name}" a été appelé 3 fois avec les mêmes arguments. Tâche incomplète — essaie de reformuler.` }
-                    return
-                }
-                recentFingerprints.push(fingerprint)
-                if (recentFingerprints.length > 10) recentFingerprints.shift()
-
-                yield { type: "tool_call", name, args }
-
-                const toolFn = tools[name]
-                const result: ToolResult = toolFn
-                    ? await toolFn(args)
-                    : { content: `Outil inconnu: "${name}". Disponibles: ${Object.keys(tools).join(", ")}`, isError: true }
-
-                yield { type: "tool_result", name, content: result.content, isError: result.isError }
-                messages.push({ role: "tool", content: result.content })
-            }
-        } else {
-            // No tool calls → final answer (already streamed token by token)
-            yield { type: "stream_commit", as: "answer", text: response.content?.trim() ?? "" }
-            break
-        }
-
-        if (i === maxIterations - 1) {
-            yield { type: "error", content: `Limite de ${maxIterations} itérations atteinte. La tâche peut être incomplète — relance avec une tâche plus ciblée.` }
-        }
+    const tools: Record<string, (args: ToolArgs) => Promise<ToolResult>> = {
+        read_file:       (args) => readFileTool(args, workDir),
+        write_file:      (args) => writeFileTool(args, workDir),
+        list_dir:        (args) => listDirTool(args, workDir),
+        search_code:     (args) => searchCodeTool(args, workDir),
+        ast_symbols:     (args) => astSymbolsTool(args, workDir),
+        ast_find_symbol: (args) => astFindSymbolTool(args, workDir),
+        git_run:         (args) => gitRunTool(args, workDir),
+        shell_run:       (args) => shellRunTool(args, workDir),
+        rag_search:      (args) => ragSearchTool(args, ollamaUrl),
     }
 
-    const durationMs = Date.now() - startTs
-    log.agent.info({ runId, durationMs, iterCount }, "agent done")
-    bus.emit("agent:done", { runId, durationMs, iterations: iterCount })
-    yield { type: "done" }
+    yield* runAgentWithTools(task, ollamaUrl, model, signal, systemContent, TOOL_DEFINITIONS, tools, "coding", maxIterations)
 }

@@ -9,6 +9,7 @@ import type { Message, Conversation, RequestLog, SystemStats, GpuStats, MetricsR
 import { addDocument, clearAllDocuments, listDocuments, removeDocument, retrieveContext } from "./rag"
 import { listConversations, getConversation, upsertConversation, deleteConversation, clearAllConversations } from "./conversations"
 import { runAgent } from "./agent"
+import { runAutomationAgent } from "./agent-automation"
 import { applyContextWindow } from "./context"
 import { bus, getRecentRuns } from "./bus"
 import { log } from "./logger"
@@ -205,7 +206,7 @@ app.post("/api/chat", async (req, res) => {
             : OLLAMA_MODEL
 
     const abort = new AbortController()
-    const timeout = setTimeout(() => abort.abort(), 120_000)
+    const timeout = setTimeout(() => abort.abort(), 180_000)
     res.on("close", () => { if (!res.writableEnded) abort.abort() })
 
     const startTime = Date.now()
@@ -486,6 +487,45 @@ app.post("/api/agent/run", async (req, res) => {
 
 app.get("/api/agent/runs", (_req, res) => {
     res.json(getRecentRuns())
+})
+
+// ─── Automation agent route ───────────────────────────────────────────────────
+
+const AUTOMATION_MODEL = process.env.AUTOMATION_MODEL ?? OLLAMA_MODEL
+
+app.post("/api/automation/run", async (req, res) => {
+    const { task, model } = req.body as { task?: unknown; model?: unknown }
+
+    if (typeof task !== "string" || task.trim().length === 0 || task.length > 2_000) {
+        res.status(400).json({ error: "Tâche invalide." })
+        return
+    }
+
+    const agentModel = typeof model === "string" && /^[\w.:@/-]{1,100}$/.test(model.trim())
+        ? model.trim()
+        : AUTOMATION_MODEL
+
+    res.setHeader("Content-Type", "text/plain; charset=utf-8")
+    res.setHeader("X-Content-Type-Options", "nosniff")
+
+    const abort = new AbortController()
+    const timeout = setTimeout(() => abort.abort(new Error("Automation agent timeout (180s)")), 180_000)
+    res.on("close", () => { clearTimeout(timeout); if (!res.writableEnded) abort.abort() })
+
+    try {
+        for await (const event of runAutomationAgent(task.trim(), OLLAMA_URL, agentModel, abort.signal)) {
+            if (abort.signal.aborted) break
+            res.write(JSON.stringify(event) + "\n")
+        }
+    } catch (err) {
+        if (!res.writableEnded) {
+            res.write(JSON.stringify({ type: "error", content: String(err) }) + "\n")
+        }
+    } finally {
+        clearTimeout(timeout)
+    }
+
+    res.end()
 })
 
 app.listen(Number(PORT), () => {
