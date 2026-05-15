@@ -2,6 +2,12 @@
 
 Interface de chat IA locale, 100% privée, propulsée par [Ollama](https://ollama.com). Zéro API externe, zéro tracking — tout tourne sur ta machine.
 
+## Aperçu
+
+| Chat — welcome screen | Dashboard d'observabilité |
+|---|---|
+| ![Chat welcome screen](docs/screenshots/chat-welcome.png) | ![Dashboard](docs/screenshots/dashboard.png) |
+
 ## Fonctionnalités
 
 - **Chat streamé** — conversations avec n'importe quel modèle Ollama, arrêt à la volée
