@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react"
 import { Bot, Check, Copy, Database, Loader2, RotateCcw, Server, X } from "lucide-react"
-import { fetchDocuments, deleteDocument } from "../lib/rag"
+import { fetchDocuments } from "../lib/rag"
 import type { RagDocument } from "@inkora/shared"
 import { API_URL } from "../lib/config"
 
@@ -13,6 +13,7 @@ type Props = {
     onSave: (prompt: string) => void
     onClose: () => void
     onClearConversations: () => void
+    activeModel: string
 }
 
 // ─── Shared sub-components ────────────────────────────────────────────────────
@@ -217,7 +218,7 @@ function DonneesSection({ onClearConversations }: { onClearConversations: () => 
 type ServerInfo = { port: string; ollamaUrl: string; model: string; version: string }
 type OllamaStatus = { ok: boolean; models: string[] } | null
 
-function ServeurSection() {
+function ServeurSection({ activeModel }: { activeModel: string }) {
     const [info, setInfo] = useState<ServerInfo | null>(null)
     const [ollamaStatus, setOllamaStatus] = useState<OllamaStatus>(null)
     const [loading, setLoading] = useState(true)
@@ -292,7 +293,7 @@ function ServeurSection() {
                                 className={`flex items-center justify-between py-2.5 ${i < ollamaStatus.models.length - 1 ? "border-b border-white/[0.04]" : ""}`}
                             >
                                 <span className="font-mono text-[12px] text-[#6A6A7E]">{m}</span>
-                                {m === info?.model && (
+                                {m === activeModel && (
                                     <span className="rounded-full bg-[#6C65E8]/15 px-2 py-0.5 text-[10px] text-[#8B84F2]">actif</span>
                                 )}
                             </div>
@@ -329,7 +330,7 @@ const NAV: { id: Section; label: string; icon: React.ReactNode; description: str
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 
-export function SettingsModal({ systemPrompt, onSave, onClose, onClearConversations }: Props) {
+export function SettingsModal({ systemPrompt, onSave, onClose, onClearConversations, activeModel }: Props) {
     const [section, setSection] = useState<Section>("assistant")
 
     // Close on Escape
@@ -409,7 +410,7 @@ export function SettingsModal({ systemPrompt, onSave, onClose, onClearConversati
                         {section === "donnees" && (
                             <DonneesSection onClearConversations={onClearConversations} />
                         )}
-                        {section === "serveur" && <ServeurSection />}
+                        {section === "serveur" && <ServeurSection activeModel={activeModel} />}
                     </div>
                 </div>
             </div>

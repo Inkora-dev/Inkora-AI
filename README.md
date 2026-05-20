@@ -4,8 +4,8 @@ Interface de chat IA locale, 100% privée, propulsée par [Ollama](https://ollam
 
 ## Aperçu
 
-| Chat — welcome screen | Dashboard d'observabilité |
-|---|---|
+| Chat — welcome screen                                     | Dashboard d'observabilité                    |
+| --------------------------------------------------------- | -------------------------------------------- |
 | ![Chat welcome screen](docs/screenshots/chat-welcome.png) | ![Dashboard](docs/screenshots/dashboard.png) |
 
 ## Fonctionnalités
@@ -26,14 +26,14 @@ Interface de chat IA locale, 100% privée, propulsée par [Ollama](https://ollam
 
 ## Stack
 
-| Couche | Technologie |
-|--------|-------------|
-| Frontend | React 19, Vite, Tailwind CSS v4, react-router-dom v7 |
-| Backend | Express 5, Node.js 18+, tsx |
-| IA | Ollama (local) |
-| AST | @typescript-eslint/typescript-estree |
-| Logs | pino + pino-pretty |
-| Tests | vitest |
+| Couche   | Technologie                                                        |
+| -------- | ------------------------------------------------------------------ |
+| Frontend | React 19, Vite, Tailwind CSS v4, react-router-dom v7               |
+| Backend  | Express 5, Node.js 18+, tsx                                        |
+| IA       | Ollama (local)                                                     |
+| AST      | @typescript-eslint/typescript-estree                               |
+| Logs     | pino + pino-pretty                                                 |
+| Tests    | vitest                                                             |
 | Monorepo | npm workspaces (`@inkora/web`, `@inkora/server`, `@inkora/shared`) |
 
 ## Prérequis
@@ -149,47 +149,47 @@ inkora-ai/
 
 ### Chat & Titrage
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/health` | Statut + modèle actif |
-| `GET` | `/api/info` | Config serveur |
-| `GET` | `/api/ollama/health` | Modèles Ollama disponibles |
-| `POST` | `/api/chat` | Chat streamé (texte brut) |
-| `POST` | `/api/title` | Génère un titre court pour une conversation |
+| Méthode | Route                | Description                                 |
+| ------- | -------------------- | ------------------------------------------- |
+| `GET`   | `/health`            | Statut + modèle actif                       |
+| `GET`   | `/api/info`          | Config serveur                              |
+| `GET`   | `/api/ollama/health` | Modèles Ollama disponibles                  |
+| `POST`  | `/api/chat`          | Chat streamé (texte brut)                   |
+| `POST`  | `/api/title`         | Génère un titre court pour une conversation |
 
 ### Conversations
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/api/conversations` | Liste toutes les conversations |
-| `GET` | `/api/conversations/:id` | Récupère une conversation |
-| `PUT` | `/api/conversations/:id` | Crée ou met à jour |
-| `DELETE` | `/api/conversations/:id` | Supprime |
-| `DELETE` | `/api/conversations` | Efface tout |
+| Méthode  | Route                    | Description                    |
+| -------- | ------------------------ | ------------------------------ |
+| `GET`    | `/api/conversations`     | Liste toutes les conversations |
+| `GET`    | `/api/conversations/:id` | Récupère une conversation      |
+| `PUT`    | `/api/conversations/:id` | Crée ou met à jour             |
+| `DELETE` | `/api/conversations/:id` | Supprime                       |
+| `DELETE` | `/api/conversations`     | Efface tout                    |
 
 ### Agent Coding
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `POST` | `/api/agent/run` | Lance l'agent coding (NDJSON streamé) |
-| `GET` | `/api/agent/runs` | Historique des 20 derniers runs |
+| Méthode | Route             | Description                           |
+| ------- | ----------------- | ------------------------------------- |
+| `POST`  | `/api/agent/run`  | Lance l'agent coding (NDJSON streamé) |
+| `GET`   | `/api/agent/runs` | Historique des 20 derniers runs       |
 
 ### Agent Homelab
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `POST` | `/api/automation/run` | Lance l'agent homelab (NDJSON streamé) |
+| Méthode | Route                 | Description                            |
+| ------- | --------------------- | -------------------------------------- |
+| `POST`  | `/api/automation/run` | Lance l'agent homelab (NDJSON streamé) |
 
 ### Système, Métriques & RAG
 
-| Méthode | Route | Description |
-|---------|-------|-------------|
-| `GET` | `/api/system` | RAM, GPU, modèle Ollama chargé |
-| `GET` | `/api/metrics` | Tokens, temps de réponse, logs récents |
-| `GET` | `/api/rag/documents` | Documents indexés |
-| `POST` | `/api/rag/upload` | Indexe un document `{ name, content }` |
-| `DELETE` | `/api/rag/documents/:id` | Supprime un document |
-| `DELETE` | `/api/rag/documents` | Vide le store RAG |
+| Méthode  | Route                    | Description                            |
+| -------- | ------------------------ | -------------------------------------- |
+| `GET`    | `/api/system`            | RAM, GPU, modèle Ollama chargé         |
+| `GET`    | `/api/metrics`           | Tokens, temps de réponse, logs récents |
+| `GET`    | `/api/rag/documents`     | Documents indexés                      |
+| `POST`   | `/api/rag/upload`        | Indexe un document `{ name, content }` |
+| `DELETE` | `/api/rag/documents/:id` | Supprime un document                   |
+| `DELETE` | `/api/rag/documents`     | Vide le store RAG                      |
 
 ### Événements `/api/agent/run` et `/api/automation/run` (NDJSON)
 
@@ -202,6 +202,20 @@ inkora-ai/
 { "type": "done" }
 ```
 
+### Prompt System exemple
+
+```text
+Tu es Inkora, un assistant technique local et privé.
+Règles :
+
+Réponds toujours en français
+Sois direct et concis — pas de phrases d'introduction inutiles, pas de répétition
+Reste pédagogique : explique les concepts simplement sans jargon excessif
+Si une réponse nécessite du code, fournis-le directement sans sur-expliquer
+Pas de formules de politesse excessives ("Bien sûr !", "Absolument !", etc.)
+Si tu ne sais pas, dis-le clairement plutôt que d'improviser
+```
+
 ## Agent Coding — mode d'emploi
 
 1. Va sur **/agent** dans la sidebar
@@ -211,17 +225,17 @@ inkora-ai/
 
 **Outils disponibles (9)**
 
-| Outil | Description | Sécurité |
-|-------|-------------|----------|
-| `read_file(path)` | Lit un fichier (200 lignes max) | — |
-| `write_file(path, content)` | Écrit ou modifie un fichier | Bloque chemins système et fichiers sensibles |
-| `list_dir(path)` | Liste un répertoire | Exclut node_modules, .git, symlinks |
-| `search_code(pattern, dir?)` | Recherche regex dans les sources | — |
-| `ast_symbols(path)` | Symboles d'un fichier (fonctions, classes, types…) avec numéros de ligne | — |
-| `ast_find_symbol(name, dir?)` | Localise la définition d'un symbole dans le projet | — |
-| `rag_search(query)` | Recherche sémantique dans les documents RAG | — |
-| `git_run(args)` | Commandes git | Whitelist sous-commandes, bloque `--force`, `--hard` |
-| `shell_run(cmd)` | Commandes shell | Whitelist + patterns bloqués |
+| Outil                         | Description                                                              | Sécurité                                             |
+| ----------------------------- | ------------------------------------------------------------------------ | ---------------------------------------------------- |
+| `read_file(path)`             | Lit un fichier (200 lignes max)                                          | —                                                    |
+| `write_file(path, content)`   | Écrit ou modifie un fichier                                              | Bloque chemins système et fichiers sensibles         |
+| `list_dir(path)`              | Liste un répertoire                                                      | Exclut node_modules, .git, symlinks                  |
+| `search_code(pattern, dir?)`  | Recherche regex dans les sources                                         | —                                                    |
+| `ast_symbols(path)`           | Symboles d'un fichier (fonctions, classes, types…) avec numéros de ligne | —                                                    |
+| `ast_find_symbol(name, dir?)` | Localise la définition d'un symbole dans le projet                       | —                                                    |
+| `rag_search(query)`           | Recherche sémantique dans les documents RAG                              | —                                                    |
+| `git_run(args)`               | Commandes git                                                            | Whitelist sous-commandes, bloque `--force`, `--hard` |
+| `shell_run(cmd)`              | Commandes shell                                                          | Whitelist + patterns bloqués                         |
 
 > `qwen2.5-coder:7b` donne de bien meilleurs résultats que les modèles généralistes.
 
@@ -241,17 +255,17 @@ inkora-ai/
 
 **Outils disponibles (9)**
 
-| Outil | Description | Sécurité |
-|-------|-------------|----------|
-| `docker_ps()` | Liste tous les conteneurs (état, image, ports) | Lecture seule |
-| `docker_logs(container, lines?)` | Dernières N lignes de logs d'un conteneur | Lecture seule |
-| `docker_stats()` | CPU / mémoire / réseau de tous les conteneurs actifs | Lecture seule |
-| `docker_inspect(target)` | Config, volumes, variables d'env, réseau | Lecture seule |
-| `docker_restart(container)` | Redémarre un conteneur | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
-| `docker_stop(container)` | Arrête un conteneur | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
-| `docker_start(container)` | Démarre un conteneur arrêté | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
-| `http_request(method, url, headers?, body?)` | GET/POST vers services internes (Home Assistant, webhooks…) | Whitelist `AUTOMATION_ALLOWED_HOSTS` |
-| `system_info(command)` | Infos système : `df`, `free`, `ps`, `uptime`, `uname` | Commandes fixes |
+| Outil                                        | Description                                                 | Sécurité                                  |
+| -------------------------------------------- | ----------------------------------------------------------- | ----------------------------------------- |
+| `docker_ps()`                                | Liste tous les conteneurs (état, image, ports)              | Lecture seule                             |
+| `docker_logs(container, lines?)`             | Dernières N lignes de logs d'un conteneur                   | Lecture seule                             |
+| `docker_stats()`                             | CPU / mémoire / réseau de tous les conteneurs actifs        | Lecture seule                             |
+| `docker_inspect(target)`                     | Config, volumes, variables d'env, réseau                    | Lecture seule                             |
+| `docker_restart(container)`                  | Redémarre un conteneur                                      | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
+| `docker_stop(container)`                     | Arrête un conteneur                                         | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
+| `docker_start(container)`                    | Démarre un conteneur arrêté                                 | Whitelist `AUTOMATION_ALLOWED_CONTAINERS` |
+| `http_request(method, url, headers?, body?)` | GET/POST vers services internes (Home Assistant, webhooks…) | Whitelist `AUTOMATION_ALLOWED_HOSTS`      |
+| `system_info(command)`                       | Infos système : `df`, `free`, `ps`, `uptime`, `uname`       | Commandes fixes                           |
 
 **Sécurité**
 
@@ -266,7 +280,7 @@ inkora-ai/
 AUTOMATION_ALLOWED_HOSTS=localhost,127.0.0.1,homeassistant.local,192.168.1.10
 ```
 
-Exemple de tâche : *"Appelle l'API Home Assistant sur http://homeassistant.local:8123/api/states avec le token Bearer et liste tous les capteurs de température."*
+Exemple de tâche : _"Appelle l'API Home Assistant sur http://homeassistant.local:8123/api/states avec le token Bearer et liste tous les capteurs de température."_
 
 ## RAG — mode d'emploi
 
@@ -307,11 +321,11 @@ Quand une conversation est vide, la page affiche un écran d'accueil centré : l
 
 L'overlay Settings est redessiné en modal large (780 × 680px) avec une **sidebar de navigation gauche** :
 
-| Section | Contenu |
-|---------|---------|
-| **Assistant** | System prompt (textarea 4000 car.) + Réinitialiser + Enregistrer |
-| **Données** | Stockage localStorage, conversations, store RAG (vider avec confirmation) |
-| **Serveur** | Version, URL backend, statut Ollama, liste des modèles disponibles |
+| Section       | Contenu                                                                   |
+| ------------- | ------------------------------------------------------------------------- |
+| **Assistant** | System prompt (textarea 4000 car.) + Réinitialiser + Enregistrer          |
+| **Données**   | Stockage localStorage, conversations, store RAG (vider avec confirmation) |
+| **Serveur**   | Version, URL backend, statut Ollama, liste des modèles disponibles        |
 
 La structure est prévue pour accueillir de nouvelles sections (Apparence, Agents, Raccourcis…) sans refactoring.
 

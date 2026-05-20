@@ -449,6 +449,8 @@ app.delete("/api/rag/documents/:id", (req, res) => {
 
 // ─── Agent route ──────────────────────────────────────────────────────────────
 
+const CODING_MODEL = process.env.CODING_MODEL ?? OLLAMA_MODEL
+
 app.post("/api/agent/run", async (req, res) => {
     const { task, workDir, model } = req.body as { task?: unknown; workDir?: unknown; model?: unknown }
 
@@ -460,7 +462,7 @@ app.post("/api/agent/run", async (req, res) => {
     const safeWorkDir = typeof workDir === "string" ? workDir.trim() : ""
     const agentModel = typeof model === "string" && /^[\w.:@/-]{1,100}$/.test(model.trim())
         ? model.trim()
-        : OLLAMA_MODEL
+        : CODING_MODEL
 
     res.setHeader("Content-Type", "text/plain; charset=utf-8")
     res.setHeader("X-Content-Type-Options", "nosniff")

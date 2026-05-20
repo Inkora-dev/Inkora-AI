@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import type { Dispatch, SetStateAction } from "react"
-import { AlertTriangle, Check, Download, Menu, Sparkles, Zap } from "lucide-react"
+import { AlertTriangle, Check, Download, Menu, Zap } from "lucide-react"
 import { ChatInput } from "../components/ChatInput"
 import { ChatMessage } from "../components/ChatMessage"
 import { DocumentPanel } from "../components/DocumentPanel"

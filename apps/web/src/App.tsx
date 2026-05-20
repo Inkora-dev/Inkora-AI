@@ -195,6 +195,7 @@ function App() {
           onSave={handleSystemPromptSave}
           onClose={() => setSettingsOpen(false)}
           onClearConversations={clearConversations}
+          activeModel={activeModel}
         />
       )}
     </AppLayout>

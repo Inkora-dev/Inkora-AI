@@ -18,7 +18,7 @@ export async function fetchModels(): Promise<string[]> {
         const r = await fetch(`${API_URL}/api/ollama/health`)
         if (!r.ok) return []
         const data = await r.json() as { models?: string[] }
-        return data.models ?? []
+        return (data.models ?? []).filter((m) => !m.toLowerCase().includes("embed"))
     } catch {
         return []
     }
