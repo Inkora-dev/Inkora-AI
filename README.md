@@ -329,22 +329,58 @@ L'overlay Settings est redessiné en modal large (780 × 680px) avec une **sideb
 
 La structure est prévue pour accueillir de nouvelles sections (Apparence, Agents, Raccourcis…) sans refactoring.
 
+---
+
+## Événements /api/agent/run et /api/automation/run (NDJSON)
+
+```tsx
+{ "type": "stream_chunk",  "chunk": "..." }
+{ "type": "stream_commit", "as": "thought" | "answer", "text": "..." }
+{ "type": "tool_call",     "name": "ast_symbols", "args": { "path": "..." } }
+{ "type": "tool_result",   "name": "ast_symbols", "content": "...", "isError": false }
+{ "type": "error",         "content": "..." }
+{ "type": "done" }
+```
+
+## Prompt System exemple
+
+```text
+Tu es Inkora, un assistant technique local et privé.
+Règles :
+
+Réponds toujours en français
+Sois direct et concis — pas de phrases d'introduction inutiles, pas de répétition
+Reste pédagogique : explique les concepts simplement sans jargon excessif
+Si une réponse nécessite du code, fournis-le directement sans sur-expliquer
+Pas de formules de politesse excessives ("Bien sûr !", "Absolument !", etc.)
+Si tu ne sais pas, dis-le clairement plutôt que d'improviser
+```
+
 ## Roadmap
 
-- [x] Agent coding avec outils write/execute (sécurité whitelist)
-- [x] Persistance RAG et conversations sur disque
-- [x] Auto-titrage des conversations
-- [x] Logs structurés (pino)
-- [x] Crash recovery agent (timeouts, idle detection)
-- [x] Sliding window contexte côté serveur
-- [x] Analyse AST TypeScript/JS (symboles + find definition)
+> Voir [ROADMAP.md](./ROADMAP.md) pour le détail complet.
+
+**Livré ✅**
+- [x] Agent Coding — boucle ReAct, 9 outils (fichiers, git, shell, AST, RAG)
+- [x] Agent Homelab — Docker + http_request interne
+- [x] RAG local — upload manuel, embeddings, persistance disque
+- [x] Sliding window contexte (≤ 6 000 tokens)
+- [x] Analyse AST TypeScript/JS
 - [x] Event bus typé + historique runs agent
+- [x] UI Open WebUI-style complète
 - [x] Suite de tests vitest (22 tests)
-- [x] Agent Homelab — Docker (ps/logs/stats/inspect/restart) + http_request interne
-- [x] UI Open WebUI-style — welcome screen, input card, sidebar groupée, titre inline, settings sidebar
-- [ ] Agent Homelab — Home Assistant (automatisations, états, services)
-- [ ] Agent Homelab — surveillance de services (alertes, healthchecks)
+
+**Court terme — v1.x**
+- [ ] RAG watcher — indexation automatique d'un répertoire (`chokidar`)
 - [ ] Upload PDF
 - [ ] Export dataset JSONL pour fine-tuning (`ollama create`)
+
+**Moyen terme — v1.x+1 / v1.x+2**
+- [ ] Mémoire utilisateur — `user-context.md` injecté dans chaque session
+- [ ] Profils de contexte — system prompt + RAG folder + modèle par profil
+
+**Long terme — v2.0+**
 - [ ] Serveur MCP — intégration Claude Code / tout client MCP
+- [ ] Connecteur JARVINx — `jarvinx_context()` dans l'Agent Homelab
+- [ ] Agent Homelab — Home Assistant (automatisations, états, services)
 - [ ] Orchestration multi-agents
