@@ -33,6 +33,33 @@
 
 ---
 
+## pre-v1.x — Consolidation (sprint en cours)
+
+> Condition de sortie : CI vert, watcher fonctionnel sur un repo de 200+ fichiers sans gel de l'event loop.
+
+Phase 1 — Tests (contractualiser avant de toucher au code)
+
+- [ ] rag.test.ts — cosineSimilarity (vecteurs identiques/orthogonaux/nuls), roundtrip persistence, retrieveContext seuil 0.3
+- [ ] agent-core.test.ts — loop detection : 3 appels identiques → erreur, 2 non consécutifs → pas de déclenchement
+- [ ] conversations.test.ts — roundtrip disque, JSON corrompu au démarrage
+- [ ] context.test.ts — budget négatif, simulation injection user-context.md
+
+Phase 2 — Batching embeddings (indépendant, gain immédiat)
+
+- [ ] rag.ts:112 — Promise.all par batch de 5 : indexation ~10 min → ~2 min
+
+Phase 3 — Migration SQLite (couverte par les tests de Phase 1)
+
+- [ ] rag.ts — remplacer store JSON par better-sqlite3 : écriture incrémentale, atomicité native
+- [ ] rag.test.ts — adapter les tests avec fichier SQLite en tmpdir()
+- [ ] .env.example — RAG_DB_PATH à la place de RAG_STORE_PATH
+
+Phase 4 — Body limit
+
+- [ ] index.ts:37 — express.json({ limit: "10mb" }) pour les fichiers du watcher
+
+  ***
+
 ## v1.x — RAG codebase automatique
 
 > Priorité : supprimer la friction de l'upload manuel et rendre le RAG utile au quotidien sur un projet entier.
